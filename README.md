@@ -1,1 +1,1 @@
-# probing-hierarchical-sentences
+# Probing for hierarchical properties in sentence representations
