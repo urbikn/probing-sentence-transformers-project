@@ -72,7 +72,7 @@ class BiLSTMEmbeddings:
         self.model = bilstm.InferSent(self.params)
         self.model.load_state_dict(torch.load(model_path))
         self.model.set_w2v_path(fasttext_path)
-        self.model.build_vocab_k_words(K=100000)  # Load embeddings of K most frequent words
+        self.model.build_vocab_k_words(K=200000)  # Load embeddings of K most frequent words
 
         self.model.to(self.device)
 
@@ -137,18 +137,32 @@ def load_embeddings(path):
 
 
 if __name__ == "__main__":
-
     # Load an example dataset
     dataset_path = '../data/probing_data/subj_number.txt'
     dataset = load_dataset(dataset_path)
     sentences = dataset['sentence'][:10].values.tolist()
 
     # Test the BiLSTMEmbeddings class
-    # bilstm_embeddings = BiLSTMEmbeddings(cache_dir='./.models/bilstm')
-    # embeddings = bilstm_embeddings.embed(sentences)
-    # save_embeddings(embeddings, dataset, './.embeddings/bilstm.subj_number.pt')
+    bilstm_embeddings = BiLSTMEmbeddings(
+        model_path='./.models/bilstm/model/infersent2.pkl',
+        fasttext_path='./.models/bilstm/fastText/crawl-300d-2M.vec',
+        cache_dir='./.models/bilstm'
+    )
+    embeddings = bilstm_embeddings.embed(sentences)
+    save_embeddings(
+        embeddings,
+        dataset,
+        './.embeddings/bilstm.subj_number.pt'
+    )
 
     # Test the SBERTEmbeddings class
-    sbert_embeddings = SBERTEmbeddings('sentence-transformers/paraphrase-MiniLM-L12-v2', cache_dir='./.models/sbert')
+    sbert_embeddings = SBERTEmbeddings(
+        'sentence-transformers/paraphrase-MiniLM-L12-v2',
+        cache_dir='./.models/sbert'
+    )
     embeddings = sbert_embeddings.embed(sentences)
-    save_embeddings(embeddings, dataset, './.embeddings/sbert.subj_number.pt')
+    save_embeddings(
+        embeddings,
+        dataset,
+        './.embeddings/sbert.subj_number.pt'
+    )

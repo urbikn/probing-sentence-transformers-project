@@ -14,6 +14,7 @@ import time
 
 import torch
 import torch.nn as nn
+from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence
 
 
 class InferSent(nn.Module):
@@ -204,7 +205,10 @@ class InferSent(nn.Module):
 
         # sort by decreasing length
         lengths, idx_sort = np.sort(lengths)[::-1], np.argsort(-lengths)
-        sentences = np.array(sentences)[idx_sort]
+        s = []
+        for i in idx_sort:
+            s.append(sentences[i])
+        sentences = s
 
         return sentences, lengths, idx_sort
 
