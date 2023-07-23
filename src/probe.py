@@ -6,12 +6,13 @@ from dataset import ProbingDataset, collate_fn
 
 
 class ProbingClassifier(nn.Module):
-    def __init__(self, input_dim, num_classes, hidden_dim=256, device='cpu'):
+    def __init__(self, input_dim, num_classes, hidden_dim=256, dropout=0, device='cpu'):
         super().__init__()
         self.device = device
 
         self.model = nn.Sequential(
             nn.Linear(input_dim, hidden_dim),
+            nn.Dropout(p=dropout),
             nn.Sigmoid(),
             nn.Linear(hidden_dim, num_classes),
         ).to(self.device)
