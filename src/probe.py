@@ -35,10 +35,10 @@ class ProbingClassifier(nn.Module):
 
             with tqdm(train_loader, desc=f'Training epoch {epoch}') as pbar:
                 for batch in pbar:
-                    inputs, labels = batch['embedding'].to(self.device), batch['label'].to(self.device)
+                    inputs, targets = batch['embedding'].to(self.device), batch['label'].to(self.device)
                     optimizer.zero_grad()
                     output = self.model(inputs)
-                    loss = criterion(output, labels)
+                    loss = criterion(output, targets)
                     loss.backward()
                     optimizer.step()
                 
@@ -48,9 +48,9 @@ class ProbingClassifier(nn.Module):
             with tqdm(val_loader, desc=f'Validation epoch {epoch}') as pbar:
                 with torch.no_grad():
                     for batch_idx, batch in enumerate(pbar):
-                        inputs, labels = batch['embedding'].to(self.device), batch['label'].to(self.device)
+                        inputs, targets = batch['embedding'].to(self.device), batch['label'].to(self.device)
                         output = self.model(inputs)
-                        loss = criterion(output, labels)
+                        loss = criterion(output, targets)
                         val_loss += loss.item()
                         pbar.set_postfix({'val_loss': val_loss / (batch_idx + 1)}) # update progress bar with current validation loss
                     
@@ -60,47 +60,46 @@ class ProbingClassifier(nn.Module):
             if val_loss < best_loss:
                 best_loss = val_loss
                 early_stop_count = 0
+                # Save model
+                torch.save(self.model.state_dict(), '.best_probing_classifier.pt')
             else:
                 early_stop_count += 1
                 if early_stop_count >= patience and patience > 0:
                     print(f'Early stopping after epoch {epoch}.')
                     break
+        
+        # Load best model
+        self.model.load_state_dict(torch.load('.best_probing_classifier.pt'))
 
+    def evaluate(self, data_loader):
+        self.model.eval()
+        total_correct = 0
 
-    def evaluate(self):
-        pass
+        with torch.no_grad():
+            for batch in data_loader:
+                inputs, targets = batch['embedding'].to(self.device), batch['label'].to(self.device)
+                output = self.model(inputs)
+
+                predictions = nn.functional.softmax(output, dim=1).argmax(1)
+                total_correct += (predictions == targets).sum().item()
+
+        accuracy = total_correct / len(data_loader.dataset)
+        return accuracy
 
 
 if __name__ == '__main__':
-    train_dataset = ProbingDataset(
-        '.embeddings/pov_questions_fourth.txt',
-        '.embeddings/sbert.pov_questions_fourth.pt',
-        'train'
-    ) 
+    data_dir = '.embeddings/pov_questions_fourth.txt'
+    embeddings_file = '.embeddings/sbert.pov_questions_fourth.pt'
+    batch_size = 32
 
-    train_loader = torch.utils.data.DataLoader(
-        train_dataset,
-        batch_size=128,
-        shuffle=True,
-        collate_fn=collate_fn
-    )
+    # Define train, val, test datasets and dataloaders
+    splits = ['train', 'val', 'test']
+    datasets = {split: ProbingDataset(data_dir, embeddings_file, split) for split in splits}
+    dataloaders = {split: torch.utils.data.DataLoader(datasets[split], batch_size=batch_size, shuffle=True, collate_fn=collate_fn) for split in splits}
 
-    val_dataset = ProbingDataset(
-        '.embeddings/pov_questions_fourth.txt',
-        '.embeddings/sbert.pov_questions_fourth.pt',
-        'val'
-    ) 
+    # Train classifier on train and val sets, then evaluate on test set
+    classifier = ProbingClassifier(384, datasets['train'].num_classes(), device='cuda')
+    classifier.train(dataloaders['train'], dataloaders['val'], nn.CrossEntropyLoss(), torch.optim.Adam(classifier.parameters()), 100, patience=10)
+    accuracy = classifier.evaluate(dataloaders['test'])
 
-    val_dataloader = torch.utils.data.DataLoader(
-        val_dataset,
-        batch_size=128,
-        shuffle=True,
-        collate_fn=collate_fn
-    )
-
-    classifier = ProbingClassifier(384, train_dataset.num_classes(), device='cuda')
-    classifier.train(train_loader, val_dataloader, nn.CrossEntropyLoss(), torch.optim.Adam(classifier.parameters()), 100, patience=3)
-
-
-
-
+    print(f'Test accuracy: {accuracy:.4f}')
