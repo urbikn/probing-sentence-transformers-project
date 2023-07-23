@@ -9,10 +9,7 @@ import urllib.request
 import shutil
 
 import bilstm.model as bilstm
-
-# usecase:
-# -- Load the model that auto downloads or loads the pretrained model
-# -- Extract the embeddings from the model
+from dataset import load_dataset, save_embeddings
 
 class BiLSTMEmbeddings:
     def __init__(self, model_path=None, fasttext_path=None, device='cpu', cache_dir='./models/bilstm'):
@@ -80,6 +77,8 @@ class BiLSTMEmbeddings:
     def embed(self, sentences, batch_size=32):
         """
         Embeds the sentences using the BiLSTM model.
+
+        Outputs a numpy array of shape (len(sentences), 4096).
         """
         embeddings = self.model.encode(sentences, bsize=batch_size, tokenize=False, verbose=True)
 
@@ -101,52 +100,12 @@ class SBERTEmbeddings:
     def embed(self, sentences, batch_size=32):
         """
         Embeds the sentences using the SentenceBert model.
+
+        Outputs a numpy array of shape (len(sentences), 384).
         """
         embeddings = self.model.encode(sentences, batch_size=batch_size, show_progress_bar=True, device=self.device)
 
         return embeddings
-
-
-def load_dataset(path):
-    """
-    Loads the dataset from the given path with the given format:
-    <split_type>\t<label>\t<sentence>
-    """
-    dataset = pd.read_csv(path, sep='\t', header=None)
-    dataset.columns = ['split_type', 'label', 'sentence']
-
-    return dataset
-
-def save_embeddings(embeddings, dataset, path):
-    """
-    Saves embeddings and dataset to the given path, both aligned with a UID.
-
-    Path format should be: <model_name>.<dataset_name>.pt
-    """
-    if len(os.path.basename(path).split('.')) != 3:
-        raise ValueError("Path format should be <model_name>.<dataset_name>.pt")
-
-    # Create a dataset UID to map the embeddings to the dataset
-    model_name, dataset_name, _ = os.path.basename(path).split('.')
-    dataset_uid = [f'{dataset_name}-{index}' for index in range(len(dataset))]
-
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-
-    # Save the dataset with the UID
-    dataset_copy = dataset.copy()
-    dataset_copy['uid'] = dataset_uid
-    dataset_copy.to_csv(os.path.join(os.path.dirname(path), f'{dataset_name}.txt'), sep='\t', index=False)
-
-    # Save the embeddings
-    dict_embeddings = dict(zip(dataset_uid, embeddings))
-    torch.save(dict_embeddings, path)
-
-
-def load_embeddings(path):
-    """
-    Loads the embeddings from the given path.
-    """
-    return torch.load(path)
 
 
 if __name__ == "__main__":
