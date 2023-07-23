@@ -77,11 +77,11 @@ class BiLSTMEmbeddings:
         self.model.to(self.device)
 
     
-    def embed(self, sentences):
+    def embed(self, sentences, batch_size=32):
         """
         Embeds the sentences using the BiLSTM model.
         """
-        embeddings = self.model.encode(sentences, tokenize=False, verbose=True)
+        embeddings = self.model.encode(sentences, bsize=batch_size, tokenize=False, verbose=True)
 
         return embeddings
 
@@ -98,11 +98,11 @@ class SBERTEmbeddings:
         self.model = SentenceTransformer(model_path, cache_folder=cache_dir, device=self.device)
     
 
-    def embed(self, sentences):
+    def embed(self, sentences, batch_size=32):
         """
         Embeds the sentences using the SentenceBert model.
         """
-        embeddings = self.model.encode(sentences, show_progress_bar=True, device=self.device)
+        embeddings = self.model.encode(sentences, batch_size=batch_size, show_progress_bar=True, device=self.device)
 
         return embeddings
 
@@ -119,14 +119,27 @@ def load_dataset(path):
 
 def save_embeddings(embeddings, dataset, path):
     """
-    Saves the embeddings as a dictionary <index, embedding> to the given path.
+    Saves embeddings and dataset to the given path, both aligned with a UID.
+
+    Path format should be: <model_name>.<dataset_name>.pt
     """
-    dict_embeddings = {}
-    for i, embedding in enumerate(embeddings):
-        dict_embeddings[i] = embedding
+    if len(os.path.basename(path).split('.')) != 3:
+        raise ValueError("Path format should be <model_name>.<dataset_name>.pt")
+
+    # Create a dataset UID to map the embeddings to the dataset
+    model_name, dataset_name, _ = os.path.basename(path).split('.')
+    dataset_uid = [f'{dataset_name}-{index}' for index in range(len(dataset))]
 
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    torch.save(embeddings, path)
+
+    # Save the dataset with the UID
+    dataset_copy = dataset.copy()
+    dataset_copy['uid'] = dataset_uid
+    dataset_copy.to_csv(os.path.join(os.path.dirname(path), f'{dataset_name}.txt'), sep='\t', index=False)
+
+    # Save the embeddings
+    dict_embeddings = dict(zip(dataset_uid, embeddings))
+    torch.save(dict_embeddings, path)
 
 
 def load_embeddings(path):
@@ -139,14 +152,17 @@ def load_embeddings(path):
 if __name__ == "__main__":
     # Load an example dataset
     dataset_path = '../data/probing_data/subj_number.txt'
-    dataset = load_dataset(dataset_path)
-    sentences = dataset['sentence'][:10].values.tolist()
+
+    # Limit to only 10 instances
+    dataset = load_dataset(dataset_path)[:10]
+    sentences = dataset['sentence'].values.tolist()
 
     # Test the BiLSTMEmbeddings class
     bilstm_embeddings = BiLSTMEmbeddings(
         model_path='./.models/bilstm/model/infersent2.pkl',
         fasttext_path='./.models/bilstm/fastText/crawl-300d-2M.vec',
-        cache_dir='./.models/bilstm'
+        cache_dir='./.models/bilstm',
+        device='cuda'
     )
     embeddings = bilstm_embeddings.embed(sentences)
     save_embeddings(
@@ -158,7 +174,8 @@ if __name__ == "__main__":
     # Test the SBERTEmbeddings class
     sbert_embeddings = SBERTEmbeddings(
         'sentence-transformers/paraphrase-MiniLM-L12-v2',
-        cache_dir='./.models/sbert'
+        cache_dir='./.models/sbert',
+        device='cuda'
     )
     embeddings = sbert_embeddings.embed(sentences)
     save_embeddings(

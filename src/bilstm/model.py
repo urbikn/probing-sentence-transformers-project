@@ -16,6 +16,8 @@ import torch
 import torch.nn as nn
 from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence
 
+from tqdm import tqdm
+
 
 class InferSent(nn.Module):
 
@@ -180,7 +182,7 @@ class InferSent(nn.Module):
             s = s.replace(" n't ", "n 't ")  # HACK to get ~MOSES tokenization
             return s.split()
         else:
-            return word_tokenize(s)
+           return word_tokenize(s)
 
     def prepare_samples(self, sentences, bsize, tokenize, verbose):
         sentences = [[self.bos] + s.split() + [self.eos] if not tokenize else
@@ -218,7 +220,7 @@ class InferSent(nn.Module):
                         sentences, bsize, tokenize, verbose)
 
         embeddings = []
-        for stidx in range(0, len(sentences), bsize):
+        for stidx in tqdm(range(0, len(sentences), bsize)):
             batch = self.get_batch(sentences[stidx:stidx + bsize])
             if self.is_cuda():
                 batch = batch.cuda()
