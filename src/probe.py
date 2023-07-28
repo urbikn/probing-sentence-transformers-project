@@ -99,7 +99,7 @@ if __name__ == '__main__':
     dataloaders = {split: torch.utils.data.DataLoader(datasets[split], batch_size=batch_size, shuffle=True, collate_fn=collate_fn) for split in splits}
 
     # Train classifier on train and val sets, then evaluate on test set
-    classifier = ProbingClassifier(384, datasets['train'].num_classes(), device='cuda')
+    classifier = ProbingClassifier(384, datasets['train'].num_classes(), dropout=0.1, device='cuda')
     classifier.train(dataloaders['train'], dataloaders['val'], nn.CrossEntropyLoss(), torch.optim.Adam(classifier.parameters()), 100, patience=10)
     accuracy = classifier.evaluate(dataloaders['test'])
 
