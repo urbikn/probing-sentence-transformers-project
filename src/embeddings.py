@@ -1,8 +1,11 @@
 import torch
 from torch import nn
+import torch.nn.functional as F
 from sentence_transformers import SentenceTransformer
+from transformers import AutoTokenizer, AutoModel
 import pandas as pd
 import numpy as np
+from tqdm import tqdm
 
 import os
 import urllib.request
@@ -85,27 +88,71 @@ class BiLSTMEmbeddings:
         return embeddings
 
 class SBERTEmbeddings:
-    def __init__(self, model_path, device='cpu', cache_dir='./models/sbert'):
+    def __init__(self, model_path, device='cpu', output_hidden_states=False, cache_dir='./models/sbert'):
         self.device = device
-        self.load(model_path, cache_dir=cache_dir)
+        self.load(model_path, cache_dir=cache_dir, output_hidden_states=output_hidden_states)
 
 
-    def load(self, model_path, cache_dir='./models/sbert'):
+    def load(self, model_path, output_hidden_states=False, cache_dir='./models/sbert'):
         """
-        Loads the pretrained BiLSTM model and sets the w2v path.
+        Loads the pretrained Sentence BERT model and tokenizer.
+
+        The additional `output_hidden_states` is used to return the hidden
+        representations from all layers of the model.
         """
-        self.model = SentenceTransformer(model_path, cache_folder=cache_dir, device=self.device)
+        self.tokenizer = AutoTokenizer.from_pretrained(model_path, cache_dir=cache_dir)
+        self.model = AutoModel.from_pretrained(model_path, cache_dir=cache_dir, output_hidden_states=output_hidden_states).to(device=self.device)
+
+    def mean_pooling(self, model_output, attention_mask):
+        """
+        Construct sentence embeddings from the hidden states of the model by using mean pooling.
+
+        Outputs a numpy array of shape (1, 384).
+        """
+        token_embeddings = model_output
+        input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
+        return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
     
 
-    def embed(self, sentences, batch_size=32):
+    def embed(self, sentences):
         """
         Embeds the sentences using the SentenceBert model.
 
         Outputs a numpy array of shape (len(sentences), 384).
         """
-        embeddings = self.model.encode(sentences, batch_size=batch_size, show_progress_bar=True, device=self.device)
 
-        return embeddings
+        inputs = self.tokenizer(sentences, return_tensors='pt', truncation=True, padding=True)
+
+        sentence_embeddings = []
+        with torch.no_grad():
+            # Get the embeddings for each sentence
+            for i in tqdm(range(0, len(inputs['input_ids']))):
+                input = inputs["input_ids"][i].unsqueeze(0).to(self.device)
+                attention_mask = inputs["attention_mask"][i].unsqueeze(0).to(self.device)
+
+                model_output = self.model(input, attention_mask=attention_mask)
+
+                # Check if the model returns hidden states from all layers
+                if model_output.hidden_states is not None:
+                    model_embeddings = []
+
+                    # Iterate over each hidden state in the model output and compute sentence embeddings
+                    for hidden_state in model_output.hidden_states:
+                        pooled_state = self.mean_pooling(hidden_state, attention_mask)
+                        model_embeddings.append(pooled_state)
+
+                    # Stack all embeddings for the current input and add to the main list
+                    stacked_embeddings = torch.stack(model_embeddings)
+                    sentence_embeddings.append(stacked_embeddings)
+                else:
+                    # Compute the mean pooling for the model output and add to the main list
+                    pooled_output = self.mean_pooling(model_output[0], attention_mask)
+                    sentence_embeddings.append(pooled_output)
+
+        # Concatenate all embeddings along axis 0
+        sentence_embeddings = torch.stack(sentence_embeddings)
+
+        return sentence_embeddings
 
 
 if __name__ == "__main__":
@@ -113,32 +160,37 @@ if __name__ == "__main__":
     dataset_path = '../data/probing_data/subj_number.txt'
 
     # Limit to only 10 instances
-    dataset = load_dataset(dataset_path)[:10]
+    dataset = load_dataset(dataset_path)[:20]
     sentences = dataset['sentence'].values.tolist()
 
     # Test the BiLSTMEmbeddings class
-    bilstm_embeddings = BiLSTMEmbeddings(
-        model_path='./.models/bilstm/model/infersent2.pkl',
-        fasttext_path='./.models/bilstm/fastText/crawl-300d-2M.vec',
-        cache_dir='./.models/bilstm',
-        device='cuda'
-    )
-    embeddings = bilstm_embeddings.embed(sentences)
-    save_embeddings(
-        embeddings,
-        dataset,
-        './.embeddings/bilstm.subj_number.pt'
-    )
+    # bilstm_embeddings = BiLSTMEmbeddings(
+    #     model_path='./.models/bilstm/model/infersent2.pkl',
+    #     fasttext_path='./.models/bilstm/fastText/crawl-300d-2M.vec',
+    #     cache_dir='./.models/bilstm',
+    #     device='cuda'
+    # )
+    # embeddings = bilstm_embeddings.embed(sentences)
+    # save_embeddings(
+    #     embeddings,
+    #     dataset,
+    #     './.embeddings/bilstm.subj_number.pt'
+    # )
 
     # Test the SBERTEmbeddings class
     sbert_embeddings = SBERTEmbeddings(
         'sentence-transformers/paraphrase-MiniLM-L12-v2',
+        output_hidden_states=True,
         cache_dir='./.models/sbert',
         device='cuda'
     )
+
     embeddings = sbert_embeddings.embed(sentences)
-    save_embeddings(
-        embeddings,
-        dataset,
-        './.embeddings/sbert.subj_number.pt'
-    )
+
+    for layer in range(embeddings.shape[1]):
+        embedding = embeddings[:, layer, :, :]
+        save_embeddings(
+            embedding,
+            dataset,
+            f'./.embeddings/extended/minilm-layer-{layer}.subj_number.pt'
+        )
