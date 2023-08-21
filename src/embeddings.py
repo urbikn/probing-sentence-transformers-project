@@ -11,8 +11,8 @@ import os
 import urllib.request
 import shutil
 
-import bilstm.model as bilstm
-from dataset import load_dataset, save_embeddings
+import src.bilstm.model as bilstm
+from src.dataset import load_dataset, save_embeddings
 
 class BiLSTMEmbeddings:
     def __init__(self, model_path=None, fasttext_path=None, device='cpu', cache_dir='./models/bilstm'):
