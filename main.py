@@ -25,7 +25,10 @@ def extract_and_save_embeddings():
     Extract the embeddings of all layers from the two Sentence Transformers models and save them to disk.
     """
     # Define the models to be used to extract embeddings
-    models = ['sentence-transformers/paraphrase-MiniLM-L12-v2', 'sentence-transformers/paraphrase-mpnet-base-v2']
+    models = [
+        'sentence-transformers/paraphrase-MiniLM-L12-v2',
+        'sentence-transformers/paraphrase-mpnet-base-v2'
+    ]
 
     # Define the datasets to be used
     datasets = ['bigram_shift', 'coordination_inversion', 'obj_number', 'odd_man_out', 'sentence_length', 'subj_number', 'top_constituents', 'tree_depth', 'word_content']
@@ -42,10 +45,12 @@ def extract_and_save_embeddings():
         print(f'Generating {model_name_short} embeddings')
 
         # Go through each dataset and extract the embeddings from the model
-        for dataset in datasets:
-            print('Loading dataset:', dataset)
-            sentences = emb.load_dataset(f'data/probing_data/{dataset}.txt')['sentence'].values.tolist()
-            embeddings = model.embed(sentences)
+        for dataset_name in datasets:
+            print('Loading dataset:', dataset_name)
+                # Limit to only 10 instances
+            dataset = emb.load_dataset(f'data/probing_data/{dataset_name}.txt')
+            sentences = dataset['sentence'].values.tolist()
+            embeddings = model.embed(sentences).cpu().detach().numpy()
 
             # Extract the embeddings from each layer and save them to disk
             for layer in range(embeddings.shape[1]):
@@ -53,7 +58,7 @@ def extract_and_save_embeddings():
                 emb.save_embeddings(
                     embedding,
                     dataset,
-                    f'./.embeddings/{model_name_short}-layer-{layer}.{dataset}.pt'
+                    f'./.embeddings/{model_name_short}-layer-{layer}.{dataset_name}.pt'
                 )
 
             torch.cuda.empty_cache()

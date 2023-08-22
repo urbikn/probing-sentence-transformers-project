@@ -139,7 +139,7 @@ class SBERTEmbeddings:
                     # Iterate over each hidden state in the model output and compute sentence embeddings
                     for hidden_state in model_output.hidden_states:
                         pooled_state = self.mean_pooling(hidden_state, attention_mask)
-                        model_embeddings.append(pooled_state)
+                        model_embeddings.append(pooled_state.cpu().detach())
 
                     # Stack all embeddings for the current input and add to the main list
                     stacked_embeddings = torch.stack(model_embeddings)
@@ -147,7 +147,9 @@ class SBERTEmbeddings:
                 else:
                     # Compute the mean pooling for the model output and add to the main list
                     pooled_output = self.mean_pooling(model_output[0], attention_mask)
-                    sentence_embeddings.append(pooled_output)
+                    sentence_embeddings.append(pooled_output.cpu().detach())
+
+                torch.cuda.empty_cache()
 
         # Concatenate all embeddings along axis 0
         sentence_embeddings = torch.stack(sentence_embeddings)
