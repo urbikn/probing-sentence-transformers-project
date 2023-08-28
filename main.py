@@ -20,6 +20,39 @@ The program has to be run in the following order:
 ####################
 """
 
+def parse_args():
+    parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
+    parser.add_argument('--model', required=True, type=str, help='the model type',
+                        choices=["basic", "finetuning", "random"])
+    parser.add_argument('--feature_extractor', default='roberta-base', type=str, choices=['roberta-base', 'deberta-base'],
+                        help='model to use as a feature extractor')
+    parser.add_argument('--training_data', required=False, type=str, help='the data type the model was trained on',
+                        choices=["raw", "scrubbed"], default=None)
+    parser.add_argument('--training_balanced', type=str, help='balancing of the training data',
+                        choices=["subsampled", "oversampled", "original"], default="original")
+    parser.add_argument('--type', type=str, help='the type of vectors to probe',
+                        choices=["raw", "scrubbed"])
+    parser.add_argument('--testing_balanced', type=str, help='balancing of the testing data',
+                        choices=["subsampled", "oversampled", "original"], default="original")
+
+
+    args = parser.parse_args()
+    print(args)
+    return args
+
+def general_probing_args(parser):
+    parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
+    parser.add_argument('--model', required=True, type=str, help='model name',
+                        choices=['mpnet', 'minilm'])
+    parser.add_argument('--task', required=True, type=str, help='name of the task')
+    parser.add_argument('--seed', required=True, type=int, help='the random seed to check on')
+    parser.add_argument('--batch_size', type=int, help='batch size to train the probe', default=16)
+    parser.add_argument('--training_data', required=True, type=str,
+                        help='path to the `.txt` dataset')
+    parser.add_argument('--embedding_data',  type=str,
+                        help='path to the `.pt` embeddings file of the same dataset.' + \
+                        'Can be left blank and will thake the dataset path and replace the file type')
+
 def extract_and_save_embeddings():
     """
     Extract the embeddings of all layers from the two Sentence Transformers models and save them to disk.
