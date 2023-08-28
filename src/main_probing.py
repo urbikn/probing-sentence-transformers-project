@@ -92,7 +92,7 @@ if __name__ == '__main__':
     report = mld_probe.analyize(datasets['train'], datasets['val'], datasets['test'], collate_fn, task=args.task, batch_size=args.batch_size)
 
     # == Save the report == #
-    if args.save_report is not None:
+    if args.save_report is None:
         args.save_report = f'.probing_reports/{args.task}-{ID}.json'
 
         if not os.path.exists('.probing_reports'):

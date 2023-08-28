@@ -63,7 +63,6 @@ class ProbingClassifier(nn.Module):
             output = self.forward(inputs)
 
             # Backward propagation
-            breakpoint()
             loss = criterion(output, targets)
             loss.backward()
             optimizer.step()
@@ -361,7 +360,6 @@ class MDLProbingClassifier():
                 }
             })
         
-        breakpoint()
         # Calculate the uniform code length
         num_classes = len(np.unique(test_preds))
         uniform_codelength = self.uniform_code_length(num_classes, len(train_dataset))
