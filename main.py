@@ -20,6 +20,7 @@ The program has to be run in the following order:
 ####################
 """
 
+
 def parse_args():
     parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('--model', required=True, type=str, help='the model type',
@@ -53,7 +54,38 @@ def general_probing_args(parser):
                         help='path to the `.pt` embeddings file of the same dataset.' + \
                         'Can be left blank and will thake the dataset path and replace the file type')
 
-def extract_and_save_embeddings():
+def extract_and_save_embeddings_bilstm(datasets):
+    """
+    Extract the embeddings of the baseline BiLSTM model and save them to disk.
+    """
+    # Test the BiLSTMEmbeddings class
+
+    print(f'Generating BiLSTM embeddings')
+    bilstm_embeddings = emb.BiLSTMEmbeddings(
+        model_path='./.models/bilstm/model/infersent2.pkl',
+        fasttext_path='./.models/bilstm/fastText/crawl-300d-2M.vec',
+        cache_dir='./.models/bilstm',
+        device='cuda'
+    )
+
+    # Go through each dataset and extract the embeddings from the model
+    for dataset_name in datasets:
+        print('Loading dataset:', dataset_name)
+            # Limit to only 10 instances
+        dataset = emb.load_dataset(f'data/probing_data/{dataset_name}.txt')
+        sentences = dataset['sentence'].values.tolist()
+
+        embeddings = bilstm_embeddings.embed(sentences)
+        emb.save_embeddings(
+            embeddings,
+            dataset,
+            f'./.embeddings/bilstm.{dataset_name}.pt'
+        )
+
+        torch.cuda.empty_cache()
+
+
+def extract_and_save_embeddings_sbert(datasets):
     """
     Extract the embeddings of all layers from the two Sentence Transformers models and save them to disk.
     """
@@ -63,9 +95,6 @@ def extract_and_save_embeddings():
         'sentence-transformers/paraphrase-mpnet-base-v2'
     ]
 
-    # Define the datasets to be used
-    datasets = ['bigram_shift', 'coordination_inversion', 'obj_number', 'odd_man_out', 'sentence_length', 'subj_number', 'top_constituents', 'tree_depth', 'word_content']
-    
     # Go through each model
     for model_name in models:
         model_name_short = model_name.split('/')[-1]
@@ -103,6 +132,11 @@ if __name__ == '__main__':
     parser.add_argument('-e', '--extract', action='store_true', help='Extract the embeddings of the dataset from the models.')
     args = parser.parse_args()
 
+    # Define the datasets to be used
+    datasets = ['bigram_shift', 'coordination_inversion', 'obj_number', 'odd_man_out', 'sentence_length', 'subj_number', 'top_constituents', 'tree_depth', 'word_content', 'past_present']
+    datasets = ['past_present']
+
     # Check if the embeddings should be extracted
     if args.extract:
-        extract_and_save_embeddings()
+        extract_and_save_embeddings_bilstm(datasets)
+        extract_and_save_embeddings_sbert(datasets)

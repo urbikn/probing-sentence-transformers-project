@@ -75,10 +75,17 @@ class ProbingDataset(Dataset):
     
     def __getitem__(self, idx):
         row = self.data.iloc[idx]
+
+        if isinstance(self.embeddings[row['uid']], np.ndarray):
+            embedding = torch.tensor(self.embeddings[row['uid']])
+        else:
+            embedding = self.embeddings[row['uid']].clone().detach()
+        label = torch.tensor(self.label_map[row['label']])
+
         return {
             'text': row['sentence'],
-            'embedding': torch.tensor(self.embeddings[row['uid']]),
-            'label': torch.tensor(self.label_map[row['label']])
+            'embedding': embedding,
+            'label': label
         }
 
     

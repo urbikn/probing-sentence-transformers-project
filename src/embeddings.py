@@ -11,8 +11,8 @@ import os
 import urllib.request
 import shutil
 
-import bilstm.model as bilstm
-from dataset import load_dataset, save_embeddings
+from .bilstm import model as bilstm
+from .dataset import load_dataset, save_embeddings
 
 class BiLSTMEmbeddings:
     def __init__(self, model_path=None, fasttext_path=None, device='cpu', cache_dir='./models/bilstm'):
@@ -162,22 +162,24 @@ if __name__ == "__main__":
     dataset_path = '../data/probing_data/subj_number.txt'
 
     # Limit to only 10 instances
-    dataset = load_dataset(dataset_path)[:20]
+    dataset = load_dataset(dataset_path)
     sentences = dataset['sentence'].values.tolist()
 
     # Test the BiLSTMEmbeddings class
-    # bilstm_embeddings = BiLSTMEmbeddings(
-    #     model_path='./.models/bilstm/model/infersent2.pkl',
-    #     fasttext_path='./.models/bilstm/fastText/crawl-300d-2M.vec',
-    #     cache_dir='./.models/bilstm',
-    #     device='cuda'
-    # )
-    # embeddings = bilstm_embeddings.embed(sentences)
-    # save_embeddings(
-    #     embeddings,
-    #     dataset,
-    #     './.embeddings/bilstm.subj_number.pt'
-    # )
+    bilstm_embeddings = BiLSTMEmbeddings(
+        model_path='./.models/bilstm/model/infersent2.pkl',
+        fasttext_path='./.models/bilstm/fastText/crawl-300d-2M.vec',
+        cache_dir='./.models/bilstm',
+        device='cuda'
+    )
+    embeddings = bilstm_embeddings.embed(sentences)
+    save_embeddings(
+        embeddings,
+        dataset,
+        './.embeddings/bilstm.subj_number.pt'
+    )
+
+    exit
 
     # Test the SBERTEmbeddings class
     sbert_embeddings = SBERTEmbeddings(

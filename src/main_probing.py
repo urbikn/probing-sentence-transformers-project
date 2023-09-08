@@ -31,8 +31,7 @@ The results will be saved in the `../reports/probing/subj_number-mpnet.json` fil
 
 def general_probing_args():
     parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument('--model', required=True, type=str, help='model name',
-                        choices=['mpnet', 'minilm'])
+    parser.add_argument('--model', required=True, type=str, help='model name')
     parser.add_argument('--task', required=True, type=str, help='name of the task')
     parser.add_argument('--training_id', type=str, help='ID with which to identify the training run')
     parser.add_argument('--seed', required=True, type=int, help='the random seed to check on')
@@ -58,7 +57,11 @@ def set_seed(seed):
 def get_embedding_size(train_dataset):
     if 'embedding' not in train_dataset[0]:
         raise ValueError('The dataset does not contain the `embedding` key. Please make sure that the dataset was created with the `save_embeddings` function.')
-    return train_dataset[0]['embedding'].shape[1]
+    embedding = train_dataset[0]['embedding']
+    if len(embedding.shape) == 1:
+        return embedding.shape[0]
+    else:
+        return embedding.shape[1]
 
 if __name__ == '__main__':
     args = general_probing_args()
