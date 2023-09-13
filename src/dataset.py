@@ -25,6 +25,7 @@ def load_embeddings(path):
     """
     Loads the embeddings from the given path.
     """
+    embedding = torch.load(path)
     return torch.load(path)
 
 def save_embeddings(embeddings, dataset, path):

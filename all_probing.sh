@@ -23,8 +23,8 @@ tasks=("past_present")
 layers=(0 1 2 3 4 5 6 7 8 9 10 11 12)
 
 # Define an array of models
-models=("paraphrase-mpnet-base-v2" "paraphrase-MiniLM-L12-v2")
-counter_limits=(6 2)
+models=("mpnet-base-v2" "MiniLM-L12-v2")
+counter_limits=(6 1)
 
 
 # Iterate over all models 

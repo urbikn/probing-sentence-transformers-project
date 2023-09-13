@@ -12,7 +12,7 @@ import urllib.request
 import shutil
 
 from .bilstm import model as bilstm
-from .dataset import load_dataset, save_embeddings
+from .dataset import load_dataset, save_embeddings, load_embeddings
 
 class BiLSTMEmbeddings:
     def __init__(self, model_path=None, fasttext_path=None, device='cpu', cache_dir='./models/bilstm'):

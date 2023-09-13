@@ -1,7 +1,9 @@
 import torch
 import argparse
 import os
+from tqdm import tqdm
 import src.embeddings as emb
+import src.pca as pca
 
 description = """
 Main program that reproduced all the results from the report.
@@ -21,38 +23,20 @@ The program has to be run in the following order:
 """
 
 
-def parse_args():
-    parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument('--model', required=True, type=str, help='the model type',
-                        choices=["basic", "finetuning", "random"])
-    parser.add_argument('--feature_extractor', default='roberta-base', type=str, choices=['roberta-base', 'deberta-base'],
-                        help='model to use as a feature extractor')
-    parser.add_argument('--training_data', required=False, type=str, help='the data type the model was trained on',
-                        choices=["raw", "scrubbed"], default=None)
-    parser.add_argument('--training_balanced', type=str, help='balancing of the training data',
-                        choices=["subsampled", "oversampled", "original"], default="original")
-    parser.add_argument('--type', type=str, help='the type of vectors to probe',
-                        choices=["raw", "scrubbed"])
-    parser.add_argument('--testing_balanced', type=str, help='balancing of the testing data',
-                        choices=["subsampled", "oversampled", "original"], default="original")
-
-
-    args = parser.parse_args()
-    print(args)
-    return args
-
 def general_probing_args(parser):
     parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument('--model', required=True, type=str, help='model name',
-                        choices=['mpnet', 'minilm'])
-    parser.add_argument('--task', required=True, type=str, help='name of the task')
-    parser.add_argument('--seed', required=True, type=int, help='the random seed to check on')
-    parser.add_argument('--batch_size', type=int, help='batch size to train the probe', default=16)
-    parser.add_argument('--training_data', required=True, type=str,
-                        help='path to the `.txt` dataset')
-    parser.add_argument('--embedding_data',  type=str,
+    # parser.add_argument('--model', required=True, type=str, help='model name',
+    #                     choices=['mpnet', 'minilm'])
+    # parser.add_argument('--task', required=True, type=str, help='name of the task')
+    # parser.add_argument('--seed', required=True, type=int, help='the random seed to check on')
+    # parser.add_argument('--batch_size', type=int, help='batch size to train the probe', default=16)
+    # parser.add_argument('--training_data', required=True, type=str,
+    #                     help='path to the `.txt` dataset')
+    parser.add_argument('--embedding_data',  type=str, default=None,
                         help='path to the `.pt` embeddings file of the same dataset.' + \
-                        'Can be left blank and will thake the dataset path and replace the file type')
+                        'Can be left blank and will take the dataset path and replace the file type')
+    
+    return parser
 
 def extract_and_save_embeddings_bilstm(datasets):
     """
@@ -68,6 +52,8 @@ def extract_and_save_embeddings_bilstm(datasets):
         device='cuda'
     )
 
+    folder = './.embeddings'
+
     # Go through each dataset and extract the embeddings from the model
     for dataset_name in datasets:
         print('Loading dataset:', dataset_name)
@@ -79,10 +65,12 @@ def extract_and_save_embeddings_bilstm(datasets):
         emb.save_embeddings(
             embeddings,
             dataset,
-            f'./.embeddings/bilstm.{dataset_name}.pt'
+            f'{folder}/bilstm.{dataset_name}.pt'
         )
 
         torch.cuda.empty_cache()
+    
+    return folder
 
 
 def extract_and_save_embeddings_sbert(datasets):
@@ -94,6 +82,8 @@ def extract_and_save_embeddings_sbert(datasets):
         'sentence-transformers/paraphrase-MiniLM-L12-v2',
         'sentence-transformers/paraphrase-mpnet-base-v2'
     ]
+
+    folder = './.embeddings'
 
     # Go through each model
     for model_name in models:
@@ -120,23 +110,48 @@ def extract_and_save_embeddings_sbert(datasets):
                 emb.save_embeddings(
                     embedding,
                     dataset,
-                    f'./.embeddings/{model_name_short}-layer-{layer}.{dataset_name}.pt'
+                    f'{folder}/{model_name_short}-layer-{layer}.{dataset_name}.pt'
                 )
 
             torch.cuda.empty_cache()
+    
+    return folder
+
+def reduce_embedding_dimensionality(embeddng_folder, target_dimension):
+    """
+    Reduce the dimensionality of the embeddings in the given folder to the given target dimension.
+    """
+    pca_instance = pca.initialise_PCA(target_dimension)
+
+    # Go through each file in the folder that is a '.pt' file
+    for file_name in tqdm(os.listdir(embeddng_folder), desc='Reducing dimensionality of embeddings'):
+        if not file_name.endswith('.pt'):
+            continue
+
+        embeddings = emb.load_embeddings(f'{embeddng_folder}/{file_name}')
+        reduced_embeddings = pca.reduce_dimensions(embeddings, pca_instance)
+        torch.save(reduced_embeddings, f'{embeddng_folder}/{file_name.replace(".pt", "")}_pca.pt')
+
+    return embedding_folder
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawTextHelpFormatter)
-
+    parser = general_probing_args(argparse.ArgumentParser())
     parser.add_argument('-e', '--extract', action='store_true', help='Extract the embeddings of the dataset from the models.')
+    parser.add_argument('-p', '--pca', type=int, help='Reduce the dimensionality of the embeddings to the given number of dimensions.', default=0)
     args = parser.parse_args()
 
     # Define the datasets to be used
     datasets = ['bigram_shift', 'coordination_inversion', 'obj_number', 'odd_man_out', 'sentence_length', 'subj_number', 'top_constituents', 'tree_depth', 'word_content', 'past_present']
-    datasets = ['past_present']
+
+    embedding_folder = args.embedding_data
 
     # Check if the embeddings should be extracted
     if args.extract:
         extract_and_save_embeddings_bilstm(datasets)
-        extract_and_save_embeddings_sbert(datasets)
+        embedding_folder = extract_and_save_embeddings_sbert(datasets)
+    if args.pca > 0 and embedding_folder is not None:
+        if not os.path.exists(embedding_folder):
+            raise ValueError('The embeddings folder does not exist. Path given: ' + embedding_folder)
+        
+        embedding_folder = reduce_embedding_dimensionality(embedding_folder, args.pca)
