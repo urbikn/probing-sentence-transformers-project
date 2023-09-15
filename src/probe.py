@@ -8,7 +8,7 @@ import uuid
 import os
 import pprint
 from sklearn import metrics
-from dataset import ProbingDataset, collate_fn
+from .dataset import ProbingDataset, collate_fn
 
 
 class ProbingClassifier(nn.Module):
@@ -298,6 +298,23 @@ class MDLProbingClassifier():
 
 
     def analyize(self, train_dataset, val_dataset, test_dataset, collate_fn, batch_size=32, learning_rate=1e-3, train_epochs=50, early_stopping=10, task='no_task'):
+        r"""Analyize the probing classifier using the MDL Probing Classifier with Online Coding evaluation.
+
+        Parameters:
+            train_dataset (Dataset): The training dataset.
+            val_dataset (Dataset): The validation dataset.
+            test_dataset (Dataset): The test dataset.
+            collate_fn (Callable): The collate function to use for the dataloaders.
+            batch_size (int, optional): The batch size to use for the dataloaders. Default is 32.
+            learning_rate (float, optional): The learning rate to use for the optimizer. Default is 1e-3.
+            train_epochs (int, optional): The number of epochs to train the probing classifier on each subset. Default is 50.
+            early_stopping (int, optional): The number of epochs to wait for improvement in validation loss before stopping training. Default is 10.
+            task (str, optional): The task for which the probing classifier is being trained. Default is 'no_task'.
+
+        Returns:
+            final_report (dict): A dictionary containing information the compression ration, uniform code length, online code length, and information \\
+                                 about the training of the probing classifier on the subsets.
+        """
         assert self.portion_ratios[-1] == 1.0, 'The last portion ratio must be 1.0'
 
         # Split the training dataset into incrementally larger subsets based on the portion ratios
@@ -383,11 +400,8 @@ class MDLProbingClassifier():
 
 
 if __name__ == '__main__':
-    # data_dir = '.embeddings/pov_questions_fourth.txt'
-    # embeddings_file = '.embeddings/sbert.pov_questions_fourth.pt'
-    # embedding_size = 384
-    data_dir = '../.embeddings/bigram_shift.txt'
-    embeddings_file = '../.embeddings/mpnet-base-v2-layer-12.bigram_shift.pt'
+    data_dir = '.embeddings/bigram_shift.txt'
+    embeddings_file = '/.embeddings/mpnet-base-v2-layer-12.bigram_shift.pt'
     embedding_size = 768
     batch_size = 32
 
@@ -400,22 +414,3 @@ if __name__ == '__main__':
     report = mld_probe.analyize(datasets['train'], datasets['val'], datasets['test'], collate_fn, task='pov_questions_fourth')
 
     pprint.pprint(report, indent=4)
-
-    if False:
-        mdl = MDLProbingClassifier(384, datasets['train'].num_classes(), device='cuda', ID='sbert_full_layer')
-        MDLProbingClassifier.split_datasets(datasets['train'], mdl.portion_ratios)
-
-        # Train classifier on train and val sets, then evaluate on test set
-        classifier = ProbingClassifier(384, datasets['train'].num_classes(), dropout=0.3, device='cuda', ID='sbert_full_layer')
-        classifier.train(
-            train_loader=dataloaders['train'],
-            val_loader=dataloaders['val'],
-            criterion=nn.CrossEntropyLoss(),
-            optimizer=torch.optim.Adam(classifier.parameters()),
-            epochs=50,
-            patience=3
-        )
-        loss, predictions, targets = classifier.evaluate(dataloaders['test'])
-
-        classification_report = metrics.classification_report(targets, predictions, digits=4, zero_division=0)
-        print(classification_report)

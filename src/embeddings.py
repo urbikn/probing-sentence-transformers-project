@@ -30,6 +30,13 @@ class BiLSTMEmbeddings:
         if (model_path is not None and fasttext_path is None) or (model_path is None and fasttext_path is not None):
             raise ValueError("Please provide both 'model_path' and 'fasttext_path', or none to download.")
         
+        # Check if both folders exist in the cache directory
+        __fasttext_path = os.path.join(os.path.join(cache_dir, "fastText"), 'crawl-300d-2M.vec'))
+        __model_path = os.path.join(os.path.join(cache_dir, 'model'), 'infersent2.pkl')
+        if os.path.exists(__model_path) and os.path.exists(__fasttext_path):
+            model_path = __model_path
+            fasttext_path = __fasttext_path
+
         # Download the model
         elif model_path is None:
             model_path, fasttext_path = self.download(cache_dir=cache_dir)
@@ -43,6 +50,13 @@ class BiLSTMEmbeddings:
         Downloads the BiLSTM model pretrained on fastText.
 
         The data is accessible from the GitHub repo at https://github.com/facebookresearch/InferSent#use-our-sentence-encoder
+
+        params:
+            cache_dir: path to the cache directory where the model and fastText will be stored
+
+        returns:
+            model_path: path to the downloaded model
+            fasttext_path: path to the downloaded fastText
         """
         print('Downloading fastText word vectors...')
         fasttext_url = 'https://dl.fbaipublicfiles.com/fasttext/vectors-english/crawl-300d-2M.vec.zip'
@@ -68,6 +82,13 @@ class BiLSTMEmbeddings:
     def load(self, model_path, fasttext_path):
         """
         Loads the pretrained BiLSTM model and sets the w2v path.
+
+        params:
+            model_path: path to the downloaded model
+            fasttext_path: path to the downloaded fastText
+        
+        returns:
+            None
         """
         self.model = bilstm.InferSent(self.params)
         self.model.load_state_dict(torch.load(model_path))
@@ -81,7 +102,12 @@ class BiLSTMEmbeddings:
         """
         Embeds the sentences using the BiLSTM model.
 
-        Outputs a numpy array of shape (len(sentences), 4096).
+        params:
+            sentences: list of sentences to embed
+            batch_size: batch size to use for passin the sentences through the model
+        
+        returns:
+            embeddings: numpy array of shape (len(sentences), 4096) of the sentence embeddings
         """
         embeddings = self.model.encode(sentences, bsize=batch_size, tokenize=False, verbose=True)
 
@@ -93,21 +119,30 @@ class SBERTEmbeddings:
         self.load(model_path, cache_dir=cache_dir, output_hidden_states=output_hidden_states)
 
 
-    def load(self, model_path, output_hidden_states=False, cache_dir='./models/sbert'):
+    def load(self, model_name_or_path, output_hidden_states=False, cache_dir='./models/sbert'):
         """
         Loads the pretrained Sentence BERT model and tokenizer.
 
         The additional `output_hidden_states` is used to return the hidden
         representations from all layers of the model.
+
+        params:
+            model_name_or_path: name or path of the model to load
+            output_hidden_states: whether to return the hidden states from all layers
         """
-        self.tokenizer = AutoTokenizer.from_pretrained(model_path, cache_dir=cache_dir)
-        self.model = AutoModel.from_pretrained(model_path, cache_dir=cache_dir, output_hidden_states=output_hidden_states).to(device=self.device)
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name_or_path, cache_dir=cache_dir)
+        self.model = AutoModel.from_pretrained(model_name_or_path, cache_dir=cache_dir, output_hidden_states=output_hidden_states).to(device=self.device)
 
     def mean_pooling(self, model_output, attention_mask):
         """
         Construct sentence embeddings from the hidden states of the model by using mean pooling.
 
-        Outputs a numpy array of shape (1, 384).
+        params:
+            model_output: hidden states from the model
+            attention_mask: attention mask for the input
+        
+        returns:
+            sentence_embeddings: numpy array of shape (1, 384) of the sentence embeddings
         """
         token_embeddings = model_output
         input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
@@ -116,9 +151,15 @@ class SBERTEmbeddings:
 
     def embed(self, sentences):
         """
-        Embeds the sentences using the SentenceBert model.
+        Embeds the sentences using the SentenceBert model. 
 
-        Outputs a numpy array of shape (len(sentences), 384).
+        embedding_size is dependent on the model used. For example, the MiniLM model has an embedding size of 384.
+
+        params:
+            sentences: list of sentences to embed
+
+        returns:
+            sentence_embeddings: numpy array of shape (len(sentences), embedding_size) of the sentence embeddings
         """
 
         inputs = self.tokenizer(sentences, return_tensors='pt', truncation=True, padding=True)
@@ -178,8 +219,6 @@ if __name__ == "__main__":
         dataset,
         './.embeddings/bilstm.subj_number.pt'
     )
-
-    exit
 
     # Test the SBERTEmbeddings class
     sbert_embeddings = SBERTEmbeddings(

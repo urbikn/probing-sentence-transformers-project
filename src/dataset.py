@@ -11,6 +11,12 @@ def load_dataset(path):
 
     or in case of probing data:
     <split_type>\t<label>\t<sentence>\t<uid>
+
+    params:
+        path: path to the dataset
+    
+    returns:
+        dataset: pandas dataframe with the dataset
     """
     dataset = pd.read_csv(path, sep='\t', header=None)
 
@@ -24,6 +30,12 @@ def load_dataset(path):
 def load_embeddings(path):
     """
     Loads the embeddings from the given path.
+
+    params:
+        path: path to the embeddings file
+    
+    returns:
+        embeddings: dict of embeddings with the UID as key
     """
     embedding = torch.load(path)
     return torch.load(path)
@@ -33,6 +45,14 @@ def save_embeddings(embeddings, dataset, path):
     Saves embeddings and dataset to the given path, both aligned with a UID.
 
     Path format should be: <model_name>.<dataset_name>.pt
+
+    params:
+        embeddings: list of embedding vectors
+        dataset: pandas dataframe with the dataset
+        path: path to save the embeddings and dataset
+
+    returns:
+        None
     """
     if len(os.path.basename(path).split('.')) != 3:
         raise ValueError("Path format should be <model_name>.<dataset_name>.pt")
