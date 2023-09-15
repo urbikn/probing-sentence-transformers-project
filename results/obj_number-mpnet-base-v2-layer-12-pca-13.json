@@ -1,0 +1,117 @@
+{
+    "uniform_codelength": 80124.0,
+    "online_codelength": 40500.76914733648,
+    "compression_ratio": 1.98,
+    "online_coding_results": [
+        {
+            "fraction": 0.001,
+            "val_loss": 112141.19025230408,
+            "test_loss": 75.25071334838867,
+            "classification_report": {
+                "accuracy": 0.575,
+                "macro f1": 0.5402298850574713,
+                "weighted f1": 0.549712643678161
+            }
+        },
+        {
+            "fraction": 0.002,
+            "val_loss": 80478.18909835815,
+            "test_loss": 128.8664894104004,
+            "classification_report": {
+                "accuracy": 0.6125,
+                "macro f1": 0.6085858585858586,
+                "weighted f1": 0.6071180555555555
+            }
+        },
+        {
+            "fraction": 0.004,
+            "val_loss": 76743.69590759277,
+            "test_loss": 194.50159645080566,
+            "classification_report": {
+                "accuracy": 0.703125,
+                "macro f1": 0.7013018914271677,
+                "weighted f1": 0.7031979243429133
+            }
+        },
+        {
+            "fraction": 0.008,
+            "val_loss": 62944.67819571495,
+            "test_loss": 379.6153898239136,
+            "classification_report": {
+                "accuracy": 0.70625,
+                "macro f1": 0.7062499999999999,
+                "weighted f1": 0.7062499999999999
+            }
+        },
+        {
+            "fraction": 0.016,
+            "val_loss": 75994.0571141243,
+            "test_loss": 709.2185643911362,
+            "classification_report": {
+                "accuracy": 0.7150663544106167,
+                "macro f1": 0.7150656598558036,
+                "weighted f1": 0.7150625343591449
+            }
+        },
+        {
+            "fraction": 0.032,
+            "val_loss": 85083.23031187057,
+            "test_loss": 1341.909382879734,
+            "classification_report": {
+                "accuracy": 0.7549746390948108,
+                "macro f1": 0.7549683351601509,
+                "weighted f1": 0.7549794882753182
+            }
+        },
+        {
+            "fraction": 0.0625,
+            "val_loss": 89494.1575088501,
+            "test_loss": 2638.5240998268127,
+            "classification_report": {
+                "accuracy": 0.7413620930697025,
+                "macro f1": 0.7413383214166251,
+                "weighted f1": 0.7413229688906795
+            }
+        },
+        {
+            "fraction": 0.125,
+            "val_loss": 87973.5504398346,
+            "test_loss": 5094.803302764893,
+            "classification_report": {
+                "accuracy": 0.7542685971043435,
+                "macro f1": 0.7541320683944757,
+                "weighted f1": 0.7541465311815381
+            }
+        },
+        {
+            "fraction": 0.25,
+            "val_loss": 57419.460183143616,
+            "test_loss": 10228.659387588501,
+            "classification_report": {
+                "accuracy": 0.7512355848434926,
+                "macro f1": 0.7510599896168161,
+                "weighted f1": 0.7510583392857383
+            }
+        },
+        {
+            "fraction": 0.5,
+            "val_loss": 53187.19439792633,
+            "test_loss": 19629.4202208519,
+            "classification_report": {
+                "accuracy": 0.7642404273376266,
+                "macro f1": 0.7642403848852506,
+                "weighted f1": 0.7642400702382275
+            }
+        },
+        {
+            "fraction": 1.0,
+            "val_loss": 48942.46345615387,
+            "test_loss": 4316.435738563538,
+            "classification_report": {
+                "accuracy": 0.7276412465163415,
+                "macro f1": 0.7274333767073374,
+                "weighted f1": 0.7274219343325299
+            }
+        }
+    ]
+}
