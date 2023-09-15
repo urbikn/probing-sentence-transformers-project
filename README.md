@@ -7,6 +7,7 @@ The repository has the following structure:
     - `original_pov_data/` - contains original data from McCoy et al. (2020)
     - `new_pov_data/` - contains data transformed from McCoy et al. (2020) using `prep_data.py` script
     - `probing_data/` - contains original data from Conneau et al. (2018) 
+- `report/` - contains the final report of the project in `.pdf` format
 - `plots/` - here you will find plots of the results which are included in the final report
 - `results/` - contains results of the probing stored as `.json` files
     - `results_analysis.ipynb` - notebook used for analyzing the results (plots, tables, etc.)
