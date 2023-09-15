@@ -31,7 +31,7 @@ class BiLSTMEmbeddings:
             raise ValueError("Please provide both 'model_path' and 'fasttext_path', or none to download.")
         
         # Check if both folders exist in the cache directory
-        __fasttext_path = os.path.join(os.path.join(cache_dir, "fastText"), 'crawl-300d-2M.vec'))
+        __fasttext_path = os.path.join(os.path.join(cache_dir, "fastText"), 'crawl-300d-2M.vec')
         __model_path = os.path.join(os.path.join(cache_dir, 'model'), 'infersent2.pkl')
         if os.path.exists(__model_path) and os.path.exists(__fasttext_path):
             model_path = __model_path

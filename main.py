@@ -262,8 +262,6 @@ if __name__ == '__main__':
     parser.add_argument('-p', '--probe', action="store_true", help='Tell program to probe the embeddings.')
     args = parser.parse_args()
 
-    breakpoint()
-
     training_folder = args.training_data
     embedding_folder = args.embedding_data
 
